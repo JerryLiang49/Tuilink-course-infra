@@ -1,0 +1,25 @@
+{
+  "name": "tuilink-project-infra",
+  "version": "0.0.1",
+  "license": "MIT",
+  "bin": {
+    "tuilink-project-infra": "bin/tuilink-project-infra.js"
+  },
+  "scripts": {
+    "deploy": "cdk deploy --require-approval never",
+    "deploy-ai-auto-reply:staging": "cross-env NODE_ENV=staging yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile staging",
+    "deploy-ai-auto-reply:prod": "cross-env NODE_ENV=prod yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile prod"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.9",
+    "aws-cdk": "2.1007.0",
+    "cross-env": "^7.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.186.0",
+    "constructs": "^10.0.0",
+    "dotenv": "^16.5.0"
+  }
+}
