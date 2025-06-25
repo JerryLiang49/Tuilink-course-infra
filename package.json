@@ -8,7 +8,9 @@
   "scripts": {
     "deploy": "cdk deploy --require-approval never",
     "deploy-ai-auto-reply:staging": "cross-env NODE_ENV=staging yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile staging",
-    "deploy-ai-auto-reply:prod": "cross-env NODE_ENV=prod yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile prod"
+    "deploy-ai-auto-reply:prod": "cross-env NODE_ENV=prod yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile prod",
+    "deploy-jd-resume-matcher:staging": "cross-env NODE_ENV=staging yarn deploy --app 'ts-node bin/jd-resume-matcher.ts' --profile staging",
+    "deploy-jd-resume-matcher:prod": "cross-env NODE_ENV=prod yarn deploy --app 'ts-node bin/jd-resume-matcher.ts' --profile prod"
   },
   "devDependencies": {
     "@types/node": "22.7.9",

@@ -1,18 +1,9 @@
 import { Stack, Duration, CfnOutput, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Function, Runtime, Code } from "aws-cdk-lib/aws-lambda";
-import {
-  RestApi,
-  Cors,
-  LambdaIntegration,
-  DomainName,
-  EndpointType,
-} from "aws-cdk-lib/aws-apigateway";
-import { ARecord, RecordTarget } from "aws-cdk-lib/aws-route53";
-import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
-import { ApiGatewayDomain } from "aws-cdk-lib/aws-route53-targets";
-import { HostedZone } from "aws-cdk-lib/aws-route53";
+import { RestApi, Cors, LambdaIntegration } from "aws-cdk-lib/aws-apigateway";
 import * as path from "path";
+import { configureDomain } from "../utils/domain";
 
 export interface AIAutoReplyStackProps extends StackProps {
   domainName?: string;
@@ -29,6 +20,7 @@ export class AIAutoReplyStack extends Stack {
     const handler = new Function(this, "Lambda", {
       runtime: Runtime.PYTHON_3_12,
       code: Code.fromAsset(path.join(__dirname, "../examples/lambda"), {
+        // Bundle the Lambda function with the requirements.txt file with Docker
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
           command: [
@@ -39,6 +31,7 @@ export class AIAutoReplyStack extends Stack {
           ],
         },
       }),
+      // Use the `handler` method at `../examples/lambda/ai_auto_reply.py`
       handler: "ai_auto_reply.handler",
       timeout: Duration.seconds(30),
       memorySize: 256,
@@ -47,7 +40,6 @@ export class AIAutoReplyStack extends Stack {
     // API Gateway
     const api = new RestApi(this, "RestApi", {
       restApiName: "AI Auto Reply API",
-      description: "API for AI Auto Reply service",
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
         allowMethods: Cors.ALL_METHODS,
@@ -62,47 +54,14 @@ export class AIAutoReplyStack extends Stack {
     apiResource.addMethod("POST", integration);
 
     // Output the API Gateway URL
-    new CfnOutput(this, "ApiUrl", {
+    new CfnOutput(this, "ApiGatewayDefaultUrl", {
       value: api.url,
       description: "API Gateway URL",
     });
 
     // Route53 Hosted Zone
     if (domainName && domainCertificateArn) {
-      // Get the hosted zone for the domain
-      const hostedZone = HostedZone.fromLookup(this, "HostedZone", {
-        domainName,
-      });
-
-      // Get the certificate for the domain
-      const certificate = Certificate.fromCertificateArn(
-        this,
-        "Certificate",
-        domainCertificateArn
-      );
-
-      // Custom Domain for API Gateway
-      const customDomain = new DomainName(this, "DomainName", {
-        domainName,
-        certificate,
-        endpointType: EndpointType.REGIONAL,
-      });
-
-      // Add base path mapping
-      customDomain.addBasePathMapping(api);
-
-      // Route53 A Record pointing to API Gateway
-      new ARecord(this, "ARecord", {
-        recordName: domainName,
-        zone: hostedZone,
-        target: RecordTarget.fromAlias(new ApiGatewayDomain(customDomain)),
-      });
-
-      // Output the custom domain URL
-      new CfnOutput(this, "CustomDomainUrl", {
-        value: `https://${domainName}`,
-        description: "Custom domain URL",
-      });
+      configureDomain(this, api, domainName, domainCertificateArn);
     }
   }
 }

@@ -6,8 +6,8 @@ import { loadEnv } from "../utils/load-env";
 
 const { camelCasedStage, account, region } = loadEnv();
 const stackName = `AIAutoReply-${camelCasedStage}`;
-const domainName = env.DOMAIN_NAME;
-const domainCertificateArn = env.DOMAIN_CERTIFICATE_ARN;
+const domainName = env.AI_AUTO_REPLY_DOMAIN_NAME;
+const domainCertificateArn = env.AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN;
 
 console.info(
   "Deploying with config",
