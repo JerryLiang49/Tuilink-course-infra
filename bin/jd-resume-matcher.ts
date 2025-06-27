@@ -6,6 +6,8 @@ import { loadEnv } from "../utils/load-env";
 
 const { camelCasedStage, account, region } = loadEnv();
 const stackName = `JdResumeMatcher-${camelCasedStage}`;
+const lambdaSourcePath = env.JD_RESUME_MATCHER_LAMBDA_SOURCE_PATH ?? "";
+const lambdaHandler = env.JD_RESUME_MATCHER_LAMBDA_HANDLER ?? "";
 const domainName = env.JD_RESUME_MATCHER_DOMAIN_NAME;
 const domainCertificateArn = env.JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN;
 const cloudFrontDomainName = env.JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME;
@@ -16,6 +18,8 @@ console.info(
   "Deploying with config",
   {
     stackName,
+    lambdaSourcePath,
+    lambdaHandler,
     domainName,
     domainCertificateArn,
     cloudFrontDomainName,
@@ -26,6 +30,8 @@ console.info(
 
 const app = new App();
 new JdResumeMatcherStack(app, stackName, {
+  lambdaSourcePath,
+  lambdaHandler,
   domainName,
   domainCertificateArn,
   cloudFrontDomainName,

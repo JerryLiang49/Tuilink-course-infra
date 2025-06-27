@@ -6,20 +6,27 @@ import * as path from "path";
 import { configureDomain } from "../utils/domain";
 
 export interface AIAutoReplyStackProps extends StackProps {
+  lambdaSourcePath: string;
+  lambdaHandler: string;
   domainName?: string;
   domainCertificateArn?: string;
 }
 
 export class AIAutoReplyStack extends Stack {
-  constructor(scope: Construct, id: string, props?: AIAutoReplyStackProps) {
+  constructor(scope: Construct, id: string, props: AIAutoReplyStackProps) {
     super(scope, id, props);
 
-    const { domainName, domainCertificateArn } = props ?? {};
+    const {
+      lambdaSourcePath,
+      lambdaHandler,
+      domainName,
+      domainCertificateArn,
+    } = props;
 
     // Lambda function
-    const handler = new Function(this, "Lambda", {
+    const lambda = new Function(this, "Lambda", {
       runtime: Runtime.PYTHON_3_12,
-      code: Code.fromAsset(path.join(__dirname, "../examples/lambda"), {
+      code: Code.fromAsset(path.join(__dirname, lambdaSourcePath), {
         // Bundle the Lambda function with the requirements.txt file with Docker
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
@@ -32,7 +39,7 @@ export class AIAutoReplyStack extends Stack {
         },
       }),
       // Use the `handler` method at `../examples/lambda/ai_auto_reply.py`
-      handler: "ai_auto_reply.handler",
+      handler: lambdaHandler,
       timeout: Duration.seconds(30),
       memorySize: 256,
     });
@@ -49,7 +56,7 @@ export class AIAutoReplyStack extends Stack {
 
     // Create API resource and methods
     const apiResource = api.root.addResource("ai-reply");
-    const integration = new LambdaIntegration(handler);
+    const integration = new LambdaIntegration(lambda);
     apiResource.addMethod("GET", integration);
     apiResource.addMethod("POST", integration);
 

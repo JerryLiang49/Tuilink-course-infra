@@ -25,6 +25,8 @@ import * as path from "path";
 import { configureDomain } from "../utils/domain";
 
 export interface JdResumeMatcherStackProps extends StackProps {
+  lambdaSourcePath: string;
+  lambdaHandler: string;
   domainName?: string;
   domainCertificateArn?: string;
   cloudFrontDomainName?: string;
@@ -32,15 +34,17 @@ export interface JdResumeMatcherStackProps extends StackProps {
 }
 
 export class JdResumeMatcherStack extends Stack {
-  constructor(scope: Construct, id: string, props?: JdResumeMatcherStackProps) {
+  constructor(scope: Construct, id: string, props: JdResumeMatcherStackProps) {
     super(scope, id, props);
 
     const {
+      lambdaSourcePath,
+      lambdaHandler,
       domainName,
       domainCertificateArn,
       cloudFrontDomainName,
       cloudFrontCertificateArn,
-    } = props ?? {};
+    } = props;
 
     // S3 Bucket for storing cached data
     const bucket = new Bucket(this, "Bucket", {
@@ -121,9 +125,9 @@ export class JdResumeMatcherStack extends Stack {
     }
 
     // Lambda function
-    const handler = new Function(this, "Lambda", {
+    const lambda = new Function(this, "Lambda", {
       runtime: Runtime.PYTHON_3_12,
-      code: Code.fromAsset(path.join(__dirname, "../examples/lambda"), {
+      code: Code.fromAsset(path.join(__dirname, lambdaSourcePath), {
         // Bundle the Lambda function with the requirements.txt file with Docker
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
@@ -135,7 +139,7 @@ export class JdResumeMatcherStack extends Stack {
         },
       }),
       // Use the `handler` method at `../examples/lambda/jd_resume_matcher.py`
-      handler: "jd_resume_matcher.handler",
+      handler: lambdaHandler,
       timeout: Duration.seconds(30),
       memorySize: 512,
       // Environment variables for the Lambda function
@@ -147,10 +151,10 @@ export class JdResumeMatcherStack extends Stack {
     });
 
     // Grant S3 read/write permissions to Lambda
-    bucket.grantReadWrite(handler);
+    bucket.grantReadWrite(lambda);
 
     // Grant Lambda to create cache invalidation for CloudFront
-    handler.addToRolePolicy(
+    lambda.addToRolePolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ["cloudfront:CreateInvalidation"],
@@ -170,7 +174,7 @@ export class JdResumeMatcherStack extends Stack {
 
     // Create API resource and methods
     const apiResource = api.root.addResource("match");
-    const integration = new LambdaIntegration(handler);
+    const integration = new LambdaIntegration(lambda);
     apiResource.addMethod("GET", integration);
     apiResource.addMethod("POST", integration);
 

@@ -87,29 +87,37 @@ cp .env.example .env.prod
 AWS_ACCOUNT=123456789012
 AWS_REGION=us-east-1
 
-# AI Auto Reply configuration (optional)
-AI_AUTO_REPLY_DOMAIN_NAME=api-staging.yourdomain.com
-AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-api-cert-id
+# AI Auto Reply configuration
+AI_AUTO_REPLY_LAMBDA_SOURCE_PATH=../examples/lambda/
+AI_AUTO_REPLY_LAMBDA_HANDLER=ai_auto_reply.handler
+# AI_AUTO_REPLY_DOMAIN_NAME=api-staging.yourdomain.com
+# AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-api-cert-id
 
-# JD Resume Matcher configuration (optional)
-JD_RESUME_MATCHER_DOMAIN_NAME=api-staging.yourdomain.com
-JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-api-cert-id
-JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME=cache-staging.yourdomain.com
-JD_RESUME_MATCHER_CLOUDFRONT_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-cloudfront-cert-id
+# JD Resume Matcher configuration
+JD_RESUME_MATCHER_LAMBDA_SOURCE_PATH=../examples/lambda/
+JD_RESUME_MATCHER_LAMBDA_HANDLER=jd_resume_matcher.handler
+# JD_RESUME_MATCHER_DOMAIN_NAME=api-staging.yourdomain.com
+# JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-api-cert-id
+# JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME=cache-staging.yourdomain.com
+# JD_RESUME_MATCHER_CLOUDFRONT_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-cloudfront-cert-id
 ```
 
 ### Environment Variables
 
-| Variable                                       | Description                                      | Required | Default |
-| ---------------------------------------------- | ------------------------------------------------ | -------- | ------- |
-| `AWS_ACCOUNT`                                  | AWS account ID                                   | Yes      | -       |
-| `AWS_REGION`                                   | AWS region for deployment                        | Yes      | -       |
-| `AI_AUTO_REPLY_DOMAIN_NAME`                    | Custom domain name for AI Auto Reply API         | No       | -       |
-| `AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN`         | ACM certificate ARN for AI Auto Reply domain     | No       | -       |
-| `JD_RESUME_MATCHER_DOMAIN_NAME`                | Custom domain name for JD Resume Matcher API     | No       | -       |
-| `JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN`     | ACM certificate ARN for JD Resume Matcher domain | No       | -       |
-| `JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME`     | Custom domain for JD Resume Matcher CloudFront   | No       | -       |
-| `JD_RESUME_MATCHER_CLOUDFRONT_CERTIFICATE_ARN` | ACM certificate ARN for CloudFront domain        | No       | -       |
+| Variable                                       | Description                                      | Required | Default                     |
+| ---------------------------------------------- | ------------------------------------------------ | -------- | --------------------------- |
+| `AWS_ACCOUNT`                                  | AWS account ID                                   | Yes      | -                           |
+| `AWS_REGION`                                   | AWS region for deployment                        | Yes      | -                           |
+| `AI_AUTO_REPLY_LAMBDA_SOURCE_PATH`             | Path to AI Auto Reply Lambda source code         | Yes      | `../examples/lambda/`       |
+| `AI_AUTO_REPLY_LAMBDA_HANDLER`                 | AI Auto Reply Lambda handler function            | Yes      | `ai_auto_reply.handler`     |
+| `AI_AUTO_REPLY_DOMAIN_NAME`                    | Custom domain name for AI Auto Reply API         | No       | -                           |
+| `AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN`         | ACM certificate ARN for AI Auto Reply domain     | No       | -                           |
+| `JD_RESUME_MATCHER_LAMBDA_SOURCE_PATH`         | Path to JD Resume Matcher Lambda source code     | Yes      | `../examples/lambda/`       |
+| `JD_RESUME_MATCHER_LAMBDA_HANDLER`             | JD Resume Matcher Lambda handler function        | Yes      | `jd_resume_matcher.handler` |
+| `JD_RESUME_MATCHER_DOMAIN_NAME`                | Custom domain name for JD Resume Matcher API     | No       | -                           |
+| `JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN`     | ACM certificate ARN for JD Resume Matcher domain | No       | -                           |
+| `JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME`     | Custom domain for JD Resume Matcher CloudFront   | No       | -                           |
+| `JD_RESUME_MATCHER_CLOUDFRONT_CERTIFICATE_ARN` | ACM certificate ARN for CloudFront domain        | No       | -                           |
 
 ## Deployment
 
