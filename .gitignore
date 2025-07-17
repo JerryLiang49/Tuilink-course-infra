@@ -12,3 +12,6 @@ cdk.context.json
 .env
 .env.staging
 .env.prod
+
+# Python
+.venv

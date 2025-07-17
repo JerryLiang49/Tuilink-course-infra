@@ -1,0 +1,30 @@
+import json
+from typing import Any
+from decimal import Decimal
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle Decimal objects from DynamoDB."""
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Convert Decimal to int if it's a whole number, otherwise to float
+            if obj % 1 == 0:
+                return int(obj)
+            else:
+                return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+def json_dumps_decimal(obj: Any) -> str:
+    """JSON dumps with Decimal support."""
+    return json.dumps(obj, cls=DecimalEncoder, default=str)
+
+def convert_floats_to_decimal(obj):
+    """Recursively convert float values to Decimal for DynamoDB compatibility."""
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    else:
+        return obj

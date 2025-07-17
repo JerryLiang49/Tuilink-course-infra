@@ -7,7 +7,8 @@ import { loadEnv } from "../utils/load-env";
 const { camelCasedStage, account, region } = loadEnv();
 const stackName = `JdResumeMatcher-${camelCasedStage}`;
 const lambdaSourcePath = env.JD_RESUME_MATCHER_LAMBDA_SOURCE_PATH ?? "";
-const lambdaHandler = env.JD_RESUME_MATCHER_LAMBDA_HANDLER ?? "";
+const quickHandlerName = env.JD_RESUME_MATCHER_QUICK_HANDLER ?? "";
+const workerHandlerName = env.JD_RESUME_MATCHER_WORKER_HANDLER ?? "";
 const domainName = env.JD_RESUME_MATCHER_DOMAIN_NAME;
 const domainCertificateArn = env.JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN;
 const cloudFrontDomainName = env.JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME;
@@ -19,7 +20,8 @@ console.info(
   {
     stackName,
     lambdaSourcePath,
-    lambdaHandler,
+    quickHandlerName,
+    workerHandlerName,
     domainName,
     domainCertificateArn,
     cloudFrontDomainName,
@@ -31,7 +33,8 @@ console.info(
 const app = new App();
 new JdResumeMatcherStack(app, stackName, {
   lambdaSourcePath,
-  lambdaHandler,
+  quickHandlerName,
+  workerHandlerName,
   domainName,
   domainCertificateArn,
   cloudFrontDomainName,
