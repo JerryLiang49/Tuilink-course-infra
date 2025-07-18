@@ -24,11 +24,11 @@ jobs_table = dynamodb.Table(JOBS_TABLE_NAME)
 def update_job_status(job_id: str, status: str, result: Dict[str, Any] = None, error: str = None) -> None:
     """Update job status in DynamoDB."""
     try:
-        update_expression = "SET #status = :status, updatedAt = :updatedAt"
+        update_expression = "SET #status = :status, updated_at = :updated_at"
         expression_attribute_names = {"#status": "status"}
         expression_attribute_values = {
             ":status": status,
-            ":updatedAt": datetime.now(timezone.utc).isoformat()
+            ":updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         if result:
