@@ -174,6 +174,7 @@ export class JdResumeMatcherStack extends Stack {
         // Bundle the Lambda function with the requirements.txt file with Docker
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
+          platform: "linux/amd64",
           command: [
             "bash",
             "-c",
@@ -201,6 +202,7 @@ export class JdResumeMatcherStack extends Stack {
         // Bundle the Lambda function with the requirements.txt file with Docker
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
+          platform: "linux/amd64",
           command: [
             "bash",
             "-c",
