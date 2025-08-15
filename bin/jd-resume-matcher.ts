@@ -14,6 +14,7 @@ const domainCertificateArn = env.JD_RESUME_MATCHER_DOMAIN_CERTIFICATE_ARN;
 const cloudFrontDomainName = env.JD_RESUME_MATCHER_CLOUDFRONT_DOMAIN_NAME;
 const cloudFrontCertificateArn =
   env.JD_RESUME_MATCHER_CLOUDFRONT_CERTIFICATE_ARN;
+const lambdaLayerSourcePath = env.JD_RESUME_MATCHER_LAMBDA_LAYER_SOURCE_PATH;
 
 console.info(
   "Deploying with config",
@@ -26,6 +27,7 @@ console.info(
     domainCertificateArn,
     cloudFrontDomainName,
     cloudFrontCertificateArn,
+    lambdaLayerSourcePath,
   },
   "\n"
 );
@@ -39,6 +41,7 @@ new JdResumeMatcherStack(app, stackName, {
   domainCertificateArn,
   cloudFrontDomainName,
   cloudFrontCertificateArn,
+  lambdaLayerSourcePath,
   env: {
     account,
     region,

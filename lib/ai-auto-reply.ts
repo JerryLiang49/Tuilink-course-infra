@@ -1,6 +1,6 @@
 import { Stack, Duration, CfnOutput, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { Function, Runtime, Code } from "aws-cdk-lib/aws-lambda";
+import { Function, Runtime, Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { RestApi, Cors, LambdaIntegration } from "aws-cdk-lib/aws-apigateway";
 import * as path from "path";
 import { configureDomain } from "../utils/domain";
@@ -10,6 +10,7 @@ export interface AIAutoReplyStackProps extends StackProps {
   lambdaHandler: string;
   domainName?: string;
   domainCertificateArn?: string;
+  lambdaLayerSourcePath?: string;
 }
 
 export class AIAutoReplyStack extends Stack {
@@ -21,21 +22,44 @@ export class AIAutoReplyStack extends Stack {
       lambdaHandler,
       domainName,
       domainCertificateArn,
+      lambdaLayerSourcePath,
     } = props;
+
+    // Optional Lambda Layer for Python dependencies
+    let dependenciesLayer: LayerVersion | undefined;
+    if (lambdaLayerSourcePath) {
+      dependenciesLayer = new LayerVersion(this, "PythonDependenciesLayer", {
+        compatibleRuntimes: [Runtime.PYTHON_3_12],
+        code: Code.fromAsset(path.join(__dirname, lambdaLayerSourcePath), {
+          bundling: {
+            image: Runtime.PYTHON_3_12.bundlingImage,
+            platform: "linux/amd64",
+            command: [
+              "bash",
+              "-c",
+              // Install dependencies into the layer under /asset-output/python (maps to /opt/python in Lambda)
+              "pip install -r requirements.txt -t /asset-output/python && cp -r . /asset-output/python",
+            ],
+          },
+        }),
+        description: "Common Python dependencies for AI Auto Reply Lambda",
+      });
+    }
 
     // Lambda function
     const lambda = new Function(this, "Lambda", {
       runtime: Runtime.PYTHON_3_12,
       code: Code.fromAsset(path.join(__dirname, lambdaSourcePath), {
-        // Bundle the Lambda function with the requirements.txt file with Docker
+        // If using a layer, only copy function source code; otherwise, bundle dependencies
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
           platform: "linux/amd64",
           command: [
             "bash",
             "-c",
-            // The content at /asset-output (reserved by AWS) will be zipped and used as the final asset.
-            "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
+            dependenciesLayer
+              ? "cp . -r /asset-output"
+              : "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
           ],
         },
       }),
@@ -43,6 +67,7 @@ export class AIAutoReplyStack extends Stack {
       handler: lambdaHandler,
       timeout: Duration.seconds(30),
       memorySize: 256,
+      layers: dependenciesLayer ? [dependenciesLayer] : undefined,
     });
 
     // API Gateway
@@ -66,6 +91,13 @@ export class AIAutoReplyStack extends Stack {
       value: api.url,
       description: "API Gateway URL",
     });
+
+    if (dependenciesLayer) {
+      new CfnOutput(this, "DependenciesLayerArn", {
+        value: dependenciesLayer.layerVersionArn,
+        description: "ARN of the Python dependencies Lambda Layer",
+      });
+    }
 
     // Route53 Hosted Zone
     if (domainName && domainCertificateArn) {

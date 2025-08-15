@@ -6,7 +6,7 @@ import {
   RemovalPolicy,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { Function, Runtime, Code } from "aws-cdk-lib/aws-lambda";
+import { Function, Runtime, Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { RestApi, Cors, LambdaIntegration } from "aws-cdk-lib/aws-apigateway";
 import { AaaaRecord, ARecord, RecordTarget } from "aws-cdk-lib/aws-route53";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
@@ -46,6 +46,7 @@ export interface JdResumeMatcherStackProps extends StackProps {
   domainCertificateArn?: string;
   cloudFrontDomainName?: string;
   cloudFrontCertificateArn?: string;
+  lambdaLayerSourcePath?: string;
 }
 
 export class JdResumeMatcherStack extends Stack {
@@ -60,7 +61,29 @@ export class JdResumeMatcherStack extends Stack {
       domainCertificateArn,
       cloudFrontDomainName,
       cloudFrontCertificateArn,
+      lambdaLayerSourcePath,
     } = props;
+
+    // Optional Lambda Layer for Python dependencies
+    let dependenciesLayer: LayerVersion | undefined;
+    if (lambdaLayerSourcePath) {
+      dependenciesLayer = new LayerVersion(this, "PythonDependenciesLayer", {
+        compatibleRuntimes: [Runtime.PYTHON_3_12],
+        code: Code.fromAsset(path.join(__dirname, lambdaLayerSourcePath), {
+          bundling: {
+            image: Runtime.PYTHON_3_12.bundlingImage,
+            platform: "linux/amd64",
+            command: [
+              "bash",
+              "-c",
+              // Install dependencies into the layer under /asset-output/python (maps to /opt/python in Lambda)
+              "pip install -r requirements.txt -t /asset-output/python && cp -r . /asset-output/python",
+            ],
+          },
+        }),
+        description: "Common Python dependencies for JD Resume Matcher Lambdas",
+      });
+    }
 
     // DynamoDB table for storing jobs
     const jobsTable = new Table(this, "JobsTable", {
@@ -171,20 +194,23 @@ export class JdResumeMatcherStack extends Stack {
     const quickHandler = new Function(this, "QuickHandler", {
       runtime: Runtime.PYTHON_3_12,
       code: Code.fromAsset(path.join(__dirname, lambdaSourcePath), {
-        // Bundle the Lambda function with the requirements.txt file with Docker
+        // If using a layer, only copy function source code; otherwise, bundle dependencies
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
           platform: "linux/amd64",
           command: [
             "bash",
             "-c",
-            "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
+            dependenciesLayer
+              ? "cp . -r /asset-output"
+              : "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
           ],
         },
       }),
       handler: quickHandlerName,
       timeout: Duration.seconds(30),
       memorySize: 512,
+      layers: dependenciesLayer ? [dependenciesLayer] : undefined,
       // Environment variables for the Lambda function
       environment: {
         JOBS_TABLE_NAME: jobsTable.tableName,
@@ -199,20 +225,23 @@ export class JdResumeMatcherStack extends Stack {
     const workerHandler = new Function(this, "WorkerHandler", {
       runtime: Runtime.PYTHON_3_12,
       code: Code.fromAsset(path.join(__dirname, lambdaSourcePath), {
-        // Bundle the Lambda function with the requirements.txt file with Docker
+        // If using a layer, only copy function source code; otherwise, bundle dependencies
         bundling: {
           image: Runtime.PYTHON_3_12.bundlingImage,
           platform: "linux/amd64",
           command: [
             "bash",
             "-c",
-            "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
+            dependenciesLayer
+              ? "cp . -r /asset-output"
+              : "pip install -r requirements.txt -t /asset-output && cp . -r /asset-output",
           ],
         },
       }),
       handler: workerHandlerName,
       timeout: Duration.minutes(15), // Max timeout for long-running jobs
       memorySize: 1024,
+      layers: dependenciesLayer ? [dependenciesLayer] : undefined,
       // Environment variables for the Lambda function
       environment: {
         JOBS_TABLE_NAME: jobsTable.tableName,
@@ -283,6 +312,13 @@ export class JdResumeMatcherStack extends Stack {
       value: api.url,
       description: "API Gateway URL",
     });
+
+    if (dependenciesLayer) {
+      new CfnOutput(this, "DependenciesLayerArn", {
+        value: dependenciesLayer.layerVersionArn,
+        description: "ARN of the Python dependencies Lambda Layer",
+      });
+    }
 
     // Output DynamoDB table name
     new CfnOutput(this, "JobsTableName", {

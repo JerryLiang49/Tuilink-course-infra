@@ -10,6 +10,7 @@ const lambdaSourcePath = env.AI_AUTO_REPLY_LAMBDA_SOURCE_PATH ?? "";
 const lambdaHandler = env.AI_AUTO_REPLY_LAMBDA_HANDLER ?? "";
 const domainName = env.AI_AUTO_REPLY_DOMAIN_NAME;
 const domainCertificateArn = env.AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN;
+const lambdaLayerSourcePath = env.AI_AUTO_REPLY_LAMBDA_LAYER_SOURCE_PATH;
 
 console.info(
   "Deploying with config",
@@ -19,6 +20,7 @@ console.info(
     lambdaHandler,
     domainName,
     domainCertificateArn,
+    lambdaLayerSourcePath,
   },
   "\n"
 );
@@ -29,6 +31,7 @@ new AIAutoReplyStack(app, stackName, {
   lambdaHandler,
   domainName,
   domainCertificateArn,
+  lambdaLayerSourcePath,
   env: {
     account,
     region,
