@@ -58,10 +58,10 @@ aws_secret_access_key = ...
 
    ```bash
    # Bootstrap staging environment
-   cdk bootstrap --profile staging
+   yarn bootstrap:staging
 
    # Bootstrap production environment
-   cdk bootstrap --profile prod
+   yarn bootstrap:prod
    ```
 
 ## Configuration
@@ -169,8 +169,8 @@ A simple API Gateway + Lambda service for AI auto-reply functionality.
 
 #### API Endpoints
 
-- **Default API Gateway URL**: `https://[api-id].execute-api.[region].amazonaws.com/prod/ai-reply`
-- **Custom Domain URL**: `https://[your-domain]/ai-reply` (if configured)
+- **Default API Gateway URL**: `https://[api-id].execute-api.[region].amazonaws.com/prod`
+- **Custom Domain URL**: `https://[your-domain]` (if configured)
 
 #### Available Methods
 
@@ -195,14 +195,14 @@ A sophisticated caching service that uses API Gateway + Lambda + S3 + CloudFront
 
 #### API Endpoints
 
-- **Default API Gateway URL**: `https://[api-id].execute-api.[region].amazonaws.com/prod/match`
-- **Custom Domain URL**: `https://[your-domain]/match` (if configured)
+- **Default API Gateway URL**: `https://[api-id].execute-api.[region].amazonaws.com/prod`
+- **Custom Domain URL**: `https://[your-domain]` (if configured)
 - **CloudFront URL**: `https://[cloudfront-domain]/[hash-key].json`
 
 #### Available Methods
 
-- `GET /match` - Returns service status and CloudFront domain information
-- `POST /match` - Processes request body, checks cache, and stores/returns data
+- `POST /process` - Create a new job with the provided request body and return the job ID
+- `GET /jobs/{job_id}` - Get the status and result of a job
 
 #### Cache Behavior
 
@@ -225,29 +225,6 @@ A sophisticated caching service that uses API Gateway + Lambda + S3 + CloudFront
 - `X-Cache`: Indicates cache status (`HIT` or `MISS`)
 - `X-Cache-Key`: The hash key used for caching
 - `X-CloudFront-URL`: Direct CloudFront URL for the cached content
-
-#### Example Usage
-
-```bash
-# First request (cache miss)
-curl -X POST https://your-api-url/prod/match \
-  -H "Content-Type: application/json" \
-  -d '{"data": "example payload"}'
-
-# Response will include:
-# - X-Cache: MISS
-# - Processed data
-# - CloudFront URL for direct access
-
-# Second request with same payload (cache hit)
-curl -X POST https://your-api-url/prod/match \
-  -H "Content-Type: application/json" \
-  -d '{"data": "example payload"}'
-
-# Response will include:
-# - X-Cache: HIT
-# - Cached data from CloudFront
-```
 
 ## Outputs
 
@@ -320,22 +297,23 @@ If deployment fails:
 
 ```
 tuilink-project-infra/
-├── bin/                    # CDK app entry points
-│   ├── ai-auto-reply.ts   # AI Auto Reply stack entry
-│   └── jd-resume-matcher.ts # JD Resume Matcher stack entry
-├── lib/                    # CDK stack definitions
-│   ├── ai-auto-reply.ts   # AI Auto Reply stack
-│   └── jd-resume-matcher.ts # JD Resume Matcher stack
-├── examples/               # Example implementations
-│   └── lambda/            # Lambda function code
-│       ├── ai_auto_reply.py
-│       ├── jd_resume_matcher.py
-│       └── requirements.txt
-├── utils/                  # Utility functions
-│   ├── domain.ts          # Domain configuration utilities
-│   └── load-env.ts        # Environment loading
-├── config/                 # Configuration files
-├── package.json           # Dependencies and scripts
-├── cdk.json              # CDK configuration
-└── tsconfig.json         # TypeScript configuration
+├── bin/                         # CDK app entry points
+│   ├── ai-auto-reply.ts         # AI Auto Reply stack entry
+│   └── jd-resume-matcher.ts     # JD Resume Matcher stack entry
+├── lib/                         # CDK stack definitions
+│   ├── ai-auto-reply.ts         # AI Auto Reply stack
+│   └── jd-resume-matcher.ts     # JD Resume Matcher stack
+├── examples/                    # Example implementations
+│   └── lambda/                  # Lambda function code
+│       ├── utils/               # Utility functions
+│       ├── ai_auto_reply.py     # AI Auto Reply Lambda function
+│       ├── quick_handler.py     # JD Resume Matcher Quick Handler Lambda function
+│       ├── worker_handler.py    # JD Resume Matcher Worker Handler Lambda function
+│       └── requirements.txt     # Shared dependencies for Lambda functions
+├── utils/                       # Utility functions
+│   ├── domain.ts                # Domain configuration utilities
+│   └── load-env.ts              # Environment loading
+├── package.json                 # Dependencies and scripts
+├── cdk.json                     # CDK configuration
+└── tsconfig.json                # TypeScript configuration
 ```
