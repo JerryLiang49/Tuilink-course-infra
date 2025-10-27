@@ -6,6 +6,8 @@
     "tuilink-project-infra": "bin/tuilink-project-infra.js"
   },
   "scripts": {
+    "bootstrap:staging": "cross-env NODE_ENV=staging cdk bootstrap --profile staging --region us-east-1",
+    "bootstrap:prod": "cross-env NODE_ENV=prod cdk bootstrap --profile prod --region us-east-1",
     "deploy": "cdk deploy --require-approval never",
     "deploy-ai-auto-reply:staging": "cross-env NODE_ENV=staging yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile staging",
     "deploy-ai-auto-reply:prod": "cross-env NODE_ENV=prod yarn deploy --app 'ts-node bin/ai-auto-reply.ts' --profile prod",
