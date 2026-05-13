@@ -92,6 +92,12 @@ AI_AUTO_REPLY_LAMBDA_SOURCE_PATH=../examples/lambda/
 AI_AUTO_REPLY_LAMBDA_HANDLER=ai_auto_reply.handler
 # Optionally provide a separate Lambda Layer containing Python deps (expects a requirements.txt under that path)
 # AI_AUTO_REPLY_LAMBDA_LAYER_SOURCE_PATH=../examples/lambda/
+# Optional runtime settings passed to the Lambda environment
+# AI_AUTO_REPLY_OPENAI_API_KEY=<your-openai-api-key>
+# AI_AUTO_REPLY_LLM_MODEL=gpt-4.1-mini
+# AI_AUTO_REPLY_LLM_TEMPERATURE=0
+# AI_AUTO_REPLY_LLM_USE_CACHE=false
+# AI_AUTO_REPLY_LLM_INCLUDE_DEBUG_FIELDS=false
 # AI_AUTO_REPLY_DOMAIN_NAME=api-staging.yourdomain.com
 # AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/your-api-cert-id
 
@@ -116,6 +122,11 @@ JD_RESUME_MATCHER_WORKER_HANDLER=worker_handler.handler
 | `AI_AUTO_REPLY_LAMBDA_SOURCE_PATH`             | Path to AI Auto Reply Lambda source code                                       | Yes      | `../examples/lambda/`    |
 | `AI_AUTO_REPLY_LAMBDA_HANDLER`                 | AI Auto Reply Lambda handler function                                          | Yes      | `ai_auto_reply.handler`  |
 | `AI_AUTO_REPLY_LAMBDA_LAYER_SOURCE_PATH`       | Optional path for a Python Lambda Layer with dependencies (`requirements.txt`) | No       | -                        |
+| `AI_AUTO_REPLY_OPENAI_API_KEY`                 | OpenAI API key passed to the AI Auto Reply Lambda environment                  | No       | -                        |
+| `AI_AUTO_REPLY_LLM_MODEL`                      | Model used by the AI Auto Reply Lambda                                         | No       | `gpt-4.1-mini`           |
+| `AI_AUTO_REPLY_LLM_TEMPERATURE`                | Temperature used by the AI Auto Reply Lambda                                   | No       | `0`                      |
+| `AI_AUTO_REPLY_LLM_USE_CACHE`                  | Whether Lambda should read/write local LLM cache files                         | No       | `false`                  |
+| `AI_AUTO_REPLY_LLM_INCLUDE_DEBUG_FIELDS`       | Whether Lambda responses include model debug fields                            | No       | `false`                  |
 | `AI_AUTO_REPLY_DOMAIN_NAME`                    | Custom domain name for AI Auto Reply API                                       | No       | -                        |
 | `AI_AUTO_REPLY_DOMAIN_CERTIFICATE_ARN`         | ACM certificate ARN for AI Auto Reply domain                                   | No       | -                        |
 | `JD_RESUME_MATCHER_LAMBDA_SOURCE_PATH`         | Path to JD Resume Matcher Lambda source code                                   | Yes      | `../examples/lambda/`    |
