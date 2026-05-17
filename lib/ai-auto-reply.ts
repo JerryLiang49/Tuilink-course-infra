@@ -11,6 +11,7 @@ export interface AIAutoReplyStackProps extends StackProps {
   domainName?: string;
   domainCertificateArn?: string;
   lambdaLayerSourcePath?: string;
+  lambdaEnvironment?: Record<string, string>;
 }
 
 export class AIAutoReplyStack extends Stack {
@@ -23,6 +24,7 @@ export class AIAutoReplyStack extends Stack {
       domainName,
       domainCertificateArn,
       lambdaLayerSourcePath,
+      lambdaEnvironment,
     } = props;
 
     // Optional Lambda Layer for Python dependencies
@@ -68,6 +70,7 @@ export class AIAutoReplyStack extends Stack {
       timeout: Duration.seconds(30),
       memorySize: 256,
       layers: dependenciesLayer ? [dependenciesLayer] : undefined,
+      environment: lambdaEnvironment,
     });
 
     // API Gateway
