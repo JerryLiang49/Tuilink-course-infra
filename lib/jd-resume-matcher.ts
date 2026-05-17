@@ -59,6 +59,10 @@ export interface JdResumeMatcherStackProps extends StackProps {
 
   // Optional Lambda layer source path for shared Python dependencies.
   lambdaLayerSourcePath?: string;
+
+  // Runtime environment variables for the Python workflow, such as OPENAI_API_KEY,
+  // model settings, cache settings, and matcher threshold.
+  lambdaEnvironment?: Record<string, string>;
 }
 
 export class JdResumeMatcherStack extends Stack {
@@ -74,6 +78,7 @@ export class JdResumeMatcherStack extends Stack {
       cloudFrontDomainName,
       cloudFrontCertificateArn,
       lambdaLayerSourcePath,
+      lambdaEnvironment,
     } = props;
 
     // Optional Lambda Layer for Python dependencies
@@ -258,11 +263,13 @@ export class JdResumeMatcherStack extends Stack {
       // Resource names and URLs are injected so the Python handler does not need
       // hardcoded AWS identifiers.
       environment: {
+        ...lambdaEnvironment,
         JOBS_TABLE_NAME: jobsTable.tableName,
         JOB_QUEUE_URL: jobQueue.queueUrl,
         CACHE_BUCKET_NAME: bucket.bucketName,
         CLOUDFRONT_DOMAIN: distribution.distributionDomainName,
         CLOUDFRONT_URL: `https://${distribution.distributionDomainName}`,
+        CLOUDFRONT_DISTRIBUTION_ID: distribution.distributionId,
       },
     });
 
@@ -294,10 +301,12 @@ export class JdResumeMatcherStack extends Stack {
       // Environment variables for the Lambda function
       // The worker does not need JOB_QUEUE_URL because SQS invokes it directly.
       environment: {
+        ...lambdaEnvironment,
         JOBS_TABLE_NAME: jobsTable.tableName,
         CACHE_BUCKET_NAME: bucket.bucketName,
         CLOUDFRONT_DOMAIN: distribution.distributionDomainName,
         CLOUDFRONT_URL: `https://${distribution.distributionDomainName}`,
+        CLOUDFRONT_DISTRIBUTION_ID: distribution.distributionId,
       },
     });
 

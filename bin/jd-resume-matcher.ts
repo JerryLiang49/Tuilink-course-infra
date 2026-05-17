@@ -30,6 +30,33 @@ const cloudFrontCertificateArn =
 // Python dependencies are packaged separately.
 const lambdaLayerSourcePath = env.JD_RESUME_MATCHER_LAMBDA_LAYER_SOURCE_PATH;
 
+// Prefer a service-specific key, but allow OPENAI_API_KEY so deploy commands can
+// source the starter repo's .env without duplicating secrets in infra files.
+const openAiApiKey =
+  env.JD_RESUME_MATCHER_OPENAI_API_KEY ?? env.OPENAI_API_KEY;
+
+// Runtime configuration for the Python workflow. These values are passed to the
+// Lambdas by CloudFormation instead of copying local .env files into the bundle.
+const lambdaEnvironment: Record<string, string> = {
+  LLM_USE_CACHE:
+    env.JD_RESUME_MATCHER_LLM_USE_CACHE ?? env.LLM_USE_CACHE ?? "false",
+  LLM_MODEL:
+    env.JD_RESUME_MATCHER_LLM_MODEL ?? env.LLM_MODEL ?? "gpt-4.1-mini",
+  LLM_TEMPERATURE:
+    env.JD_RESUME_MATCHER_LLM_TEMPERATURE ?? env.LLM_TEMPERATURE ?? "0",
+  LLM_EMBEDDING_MODEL:
+    env.JD_RESUME_MATCHER_LLM_EMBEDDING_MODEL ??
+    env.LLM_EMBEDDING_MODEL ??
+    "text-embedding-3-small",
+  MATCH_THRESHOLD:
+    env.JD_RESUME_MATCHER_MATCH_THRESHOLD ?? env.MATCH_THRESHOLD ?? "0.5",
+};
+
+if (openAiApiKey) {
+  // Do not log the actual key. The config logger below masks it as <set>.
+  lambdaEnvironment.OPENAI_API_KEY = openAiApiKey;
+}
+
 // Print non-secret deployment settings before synthesis. This is useful because
 // most deployment failures here are path/profile/config mistakes.
 console.info(
@@ -44,6 +71,10 @@ console.info(
     cloudFrontDomainName,
     cloudFrontCertificateArn,
     lambdaLayerSourcePath,
+    lambdaEnvironment: {
+      ...lambdaEnvironment,
+      OPENAI_API_KEY: openAiApiKey ? "<set>" : "<missing>",
+    },
   },
   "\n"
 );
@@ -59,6 +90,7 @@ new JdResumeMatcherStack(app, stackName, {
   cloudFrontDomainName,
   cloudFrontCertificateArn,
   lambdaLayerSourcePath,
+  lambdaEnvironment,
   env: {
     account,
     region,
