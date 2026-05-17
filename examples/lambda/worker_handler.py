@@ -11,19 +11,27 @@ from utils.hash import calculate_hash
 from utils.s3_cloudfront import get_cached_data, store_in_s3, json_dumps_decimal
 from utils.decimal import convert_floats_to_decimal
 
+# The worker handler is the asynchronous processor. SQS invokes it after the
+# quick handler creates a job, so API clients do not wait for long processing.
+
 # Initialize AWS clients
+# Initialize at module load for Lambda warm-start reuse.
 dynamodb = boto3.resource('dynamodb')
 
 # Environment variables
+# CDK injects the table name from the stack.
 JOBS_TABLE_NAME = os.environ['JOBS_TABLE_NAME']
 
 # DynamoDB table
+# Job records track status transitions and final results for polling clients.
 jobs_table = dynamodb.Table(JOBS_TABLE_NAME)
 
 
 def update_job_status(job_id: str, status: str, result: Dict[str, Any] = None, error: str = None) -> None:
     """Update job status in DynamoDB."""
     try:
+        # Build one update expression so status, timestamps, result, and errors
+        # are written atomically for a job.
         update_expression = "SET #status = :status, updated_at = :updated_at"
         expression_attribute_names = {"#status": "status"}
         expression_attribute_values = {
@@ -32,6 +40,8 @@ def update_job_status(job_id: str, status: str, result: Dict[str, Any] = None, e
         }
         
         if result:
+            # DynamoDB stores numbers as Decimal, so convert Python floats before
+            # writing nested result data.
             update_expression += ", #result = :result"
             expression_attribute_names["#result"] = "result"
             expression_attribute_values[":result"] = convert_floats_to_decimal(result)
@@ -55,6 +65,8 @@ def update_job_status(job_id: str, status: str, result: Dict[str, Any] = None, e
 def get_job_payload(job_id: str) -> Dict[str, Any]:
     """Get job payload from DynamoDB."""
     try:
+        # SQS messages contain only job_id; the payload is loaded here from the
+        # authoritative DynamoDB job record.
         response = jobs_table.get_item(Key={'job_id': job_id})
         
         if 'Item' not in response:
@@ -71,10 +83,12 @@ def process_job(job_id: str, payload: str) -> Dict[str, Any]:
     print(f"Processing job {job_id} with payload: {payload}")
     
     # Calculate hash from payload for caching
+    # The hash becomes the stable object key for cached output.
     cache_key = calculate_hash(payload)
     print(f"Cache key for job {job_id}: {cache_key}")
     
     # Check if result already exists in CloudFront cache
+    # Cache hits avoid repeating expensive matching logic for identical inputs.
     existing_cache_data = get_cached_data(cache_key)
     if existing_cache_data:
         print(f"Job {job_id} result found in cache, skipping processing")
@@ -86,14 +100,18 @@ def process_job(job_id: str, payload: str) -> Dict[str, Any]:
         return existing_cache_data
     
     # Update job status to PROCESSING
+    # Polling clients can use this transition to show progress.
     update_job_status(job_id, "PROCESSING")
     
     # Simulate long-running work
     # In a real scenario, this would be actual job processing
+    # This sample sleeps to demonstrate the async architecture without requiring
+    # real resume matching logic.
     processing_time = random.uniform(10, 60)  # Random processing time between 10-60 seconds
     print(f"Simulating {processing_time:.2f} seconds of processing...")
     
     # Break the sleep into smaller chunks to show progress
+    # Chunking produces CloudWatch logs during the simulated wait.
     chunks = int(processing_time / 5)  # 5-second chunks
     remaining_time = processing_time
     
@@ -107,6 +125,8 @@ def process_job(job_id: str, payload: str) -> Dict[str, Any]:
         time.sleep(remaining_time)
     
     # Process and cache result (removed random failure for testing)
+    # Replace this sample payload with real JD/resume matching output in the
+    # production starter implementation.
     processed_result = {
         'cache_key': cache_key,
         'source': 'processor',
@@ -121,6 +141,8 @@ def process_job(job_id: str, payload: str) -> Dict[str, Any]:
     }
     
     # Store result in S3 and get CloudFront URL
+    # The DynamoDB result includes the CDN URL so clients can fetch cached output
+    # directly when needed.
     try:
         cloudfront_url = store_in_s3(cache_key, processed_result)
         processed_result['cloudfront_url'] = cloudfront_url
@@ -137,11 +159,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"Worker received event: {json.dumps(event)}")
     
     # Process SQS messages
+    # Each record corresponds to one queued job. The CDK event source maps only
+    # one message per batch to keep failures isolated.
     records = event.get('Records', [])
     
     for record in records:
         try:
             # Parse SQS message
+            # The quick handler sends {"job_id": "..."} as the message body.
             message_body = json.loads(record['body'])
             job_id = message_body.get('job_id')
             
@@ -152,6 +177,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             print(f"Processing job: {job_id}")
             
             # Get job payload from DynamoDB
+            # Missing jobs are skipped because there is no payload to process.
             try:
                 payload = get_job_payload(job_id)
             except ValueError as e:
@@ -163,6 +189,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 continue
             
             # Process the job
+            # Any processing exception is captured into the job record instead
+            # of crashing the entire batch.
             try:
                 result = process_job(job_id, payload)
                 print(f"Job {job_id} processed successfully")
@@ -186,4 +214,4 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "records_processed": len(records)
             }
         })
-    } 
+    }

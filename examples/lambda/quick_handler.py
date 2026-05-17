@@ -9,20 +9,29 @@ from botocore.exceptions import ClientError
 from utils.s3_cloudfront import json_dumps_decimal
 from utils.hash import calculate_hash
 
+# The quick handler is the synchronous API Lambda. It should do minimal work:
+# dedupe requests, create a job record, enqueue SQS work, or return job status.
+
 # Initialize AWS clients
+# Clients/resources are initialized at import time so warm Lambda invocations can
+# reuse connections instead of recreating them for every request.
 dynamodb = boto3.resource('dynamodb')
 sqs = boto3.client('sqs')
 
 # Environment variables
+# CDK injects these values from the created DynamoDB table and SQS queue.
 JOBS_TABLE_NAME = os.environ['JOBS_TABLE_NAME']
 JOB_QUEUE_URL = os.environ['JOB_QUEUE_URL']
 
 # DynamoDB table
+# This table is the API-visible source of truth for async job status.
 jobs_table = dynamodb.Table(JOBS_TABLE_NAME)
 
 
 def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     """Create a standardized API Gateway response."""
+    # Centralizing response shape keeps CORS and JSON serialization consistent
+    # across success and error paths.
     return {
         'statusCode': status_code,
         'headers': {
@@ -38,11 +47,15 @@ def handle_post_process(event: Dict[str, Any]) -> Dict[str, Any]:
     """Handle POST /process requests - check existing job by cache_key first, then create new job and queue it."""
     try:
         # Parse request body
+        # The raw body string is used for hashing so identical requests map to
+        # the same cache key.
         body = event.get('body', '{}')
 
         cache_key = calculate_hash(body)
         
         # Check if a job already exists with this cache_key using GSI
+        # This avoids duplicate processing when clients retry or submit the same
+        # resume/JD payload more than once.
         try:
             response = jobs_table.query(
                 IndexName='cache-key-index',
@@ -66,9 +79,12 @@ def handle_post_process(event: Dict[str, Any]) -> Dict[str, Any]:
             # Continue with creating new job if query fails
         
         # Generate unique job ID
+        # The job_id is the client-facing polling key for GET /jobs/{job_id}.
         job_id = str(uuid.uuid4())
         
         # Create job record in DynamoDB
+        # Store the raw payload so the worker can process exactly what was
+        # submitted after it receives the SQS message.
         job = {
             'job_id': job_id,
             'status': 'PENDING',
@@ -79,9 +95,13 @@ def handle_post_process(event: Dict[str, Any]) -> Dict[str, Any]:
         }
         
         # Store job in DynamoDB
+        # The record is written before SQS enqueue so polling can find it
+        # immediately after the 202 response.
         jobs_table.put_item(Item=job)
         
         # Send message to SQS queue
+        # Only the job_id is sent; the worker loads the full payload from
+        # DynamoDB to keep SQS messages small.
         sqs.send_message(
             QueueUrl=JOB_QUEUE_URL,
             MessageBody=json.dumps({
@@ -111,6 +131,8 @@ def handle_get_job_status(event: Dict[str, Any]) -> Dict[str, Any]:
     """Handle GET /jobs/{job_id} requests - return job status."""
     try:
         # Extract job_id from path parameters
+        # API Gateway supplies path variables under pathParameters for Lambda
+        # proxy integrations.
         path_parameters = event.get('pathParameters', {})
         job_id = path_parameters.get('job_id')
         
@@ -120,6 +142,8 @@ def handle_get_job_status(event: Dict[str, Any]) -> Dict[str, Any]:
             })
         
         # Get job from DynamoDB
+        # The full job document is returned so callers can see status, result,
+        # or failure details.
         try:
             response = jobs_table.get_item(Key={'job_id': job_id})
             
@@ -157,6 +181,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"Received event: {json.dumps(event)}")
     
     # Handle different HTTP methods and paths
+    # This keeps API Gateway simple: both routes point to one Lambda and Python
+    # dispatches based on method/path.
     http_method = event.get('httpMethod', 'GET')
     path = event.get('path', '/')
     
@@ -176,4 +202,4 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return create_response(500, {
             'message': 'Internal server error',
             'error': str(e)
-        }) 
+        })
